@@ -1,7 +1,9 @@
 'use client'
 
+import { useRef } from 'react'
 import Image from 'next/image'
 import { motion, type Variants } from 'framer-motion'
+import gsap from 'gsap'
 
 const topServices = [
   {
@@ -65,94 +67,227 @@ interface ServiceItem {
 }
 
 function ServiceCard({ service }: { service: ServiceItem }) {
+  const cardRef = useRef<HTMLDivElement | null>(null)
+  const iconRef = useRef<HTMLDivElement | null>(null)
+  const glowRef = useRef<HTMLDivElement | null>(null)
+  const cornerTlRef = useRef<SVGSVGElement | null>(null)
+  const cornerBrRef = useRef<SVGSVGElement | null>(null)
+
+  const handleMouseMove = (e: React.MouseEvent<HTMLDivElement>) => {
+    const card = cardRef.current
+    if (!card) return
+
+    const rect = card.getBoundingClientRect()
+    const x = e.clientX - rect.left
+    const y = e.clientY - rect.top
+
+    const centerX = rect.width / 2
+    const centerY = rect.height / 2
+
+    const rotateX = ((y - centerY) / centerY) * -10
+    const rotateY = ((x - centerX) / centerX) * 10
+
+    // GSAP 3D Card Tilt
+    gsap.to(card, {
+      rotateX: rotateX,
+      rotateY: rotateY,
+      y: -8,
+      scale: 1.02,
+      duration: 0.3,
+      ease: 'power2.out',
+      transformPerspective: 1000,
+    })
+
+    // GSAP 3D Floating Icon Parallax
+    if (iconRef.current) {
+      gsap.to(iconRef.current, {
+        x: (x - centerX) * 0.12,
+        y: (y - centerY) * 0.12 - 6,
+        scale: 1.14,
+        rotateZ: ((x - centerX) / centerX) * 4,
+        duration: 0.35,
+        ease: 'power2.out',
+      })
+    }
+
+    // Dynamic Follow-Pointer Spotlight Glow
+    if (glowRef.current) {
+      gsap.to(glowRef.current, {
+        x: x - centerX,
+        y: y - centerY,
+        opacity: 0.7,
+        scale: 1.2,
+        duration: 0.25,
+        ease: 'power1.out',
+      })
+    }
+  }
+
+  const handleMouseEnter = () => {
+    // Corner brackets pop animation
+    if (cornerTlRef.current && cornerBrRef.current) {
+      gsap.to([cornerTlRef.current, cornerBrRef.current], {
+        scale: 1.2,
+        filter: 'drop-shadow(0 0 8px rgba(240, 185, 80, 0.9))',
+        duration: 0.3,
+        ease: 'back.out(2)',
+      })
+    }
+  }
+
+  const handleMouseLeave = () => {
+    const card = cardRef.current
+    if (!card) return
+
+    // Smooth return to resting state
+    gsap.to(card, {
+      rotateX: 0,
+      rotateY: 0,
+      y: 0,
+      scale: 1,
+      duration: 0.7,
+      ease: 'elastic.out(1, 0.5)',
+    })
+
+    if (iconRef.current) {
+      gsap.to(iconRef.current, {
+        x: 0,
+        y: 0,
+        scale: 1,
+        rotateZ: 0,
+        duration: 0.6,
+        ease: 'elastic.out(1, 0.5)',
+      })
+    }
+
+    if (glowRef.current) {
+      gsap.to(glowRef.current, {
+        x: 0,
+        y: 0,
+        opacity: 0,
+        scale: 0.8,
+        duration: 0.5,
+        ease: 'power2.out',
+      })
+    }
+
+    if (cornerTlRef.current && cornerBrRef.current) {
+      gsap.to([cornerTlRef.current, cornerBrRef.current], {
+        scale: 1,
+        filter: 'none',
+        duration: 0.4,
+        ease: 'power2.out',
+      })
+    }
+  }
+
   return (
     <motion.div
       variants={cardVariants}
-      whileHover={{ y: -6, transition: { duration: 0.25 } }}
-      className="group relative w-full flex flex-col items-center text-center p-7 sm:p-8 md:p-9 transition-all duration-300 min-h-[350px] sm:min-h-[370px] justify-between select-none"
+      className="w-full flex"
+      style={{ perspective: 1000 }}
     >
-      {/* ── Outer Golden Ambient Hover Glow ── */}
       <div
-        className="absolute -inset-1 opacity-0 group-hover:opacity-100 blur-xl transition-opacity duration-500 bg-gradient-to-b from-[#f0b14b]/30 via-[#c8892a]/10 to-transparent -z-10 pointer-events-none"
-        style={{
-          clipPath:
-            'polygon(20px 0, calc(100% - 20px) 0, 100% 20px, 100% calc(100% - 20px), calc(100% - 20px) 100%, 20px 100%, 0 calc(100% - 20px), 0 20px)',
-        }}
-      />
-
-      {/* ── Outer Chamfered Border & Background ── */}
-      <div
-        className="absolute inset-0 bg-gradient-to-b from-[#d4a853] via-[#8c6527] to-[#d4a853]/60 p-[1.5px] transition-all duration-300 group-hover:from-[#ffd580] group-hover:via-[#e5a53d] group-hover:to-[#ffd580]"
-        style={{
-          clipPath:
-            'polygon(22px 0, calc(100% - 22px) 0, 100% 22px, 100% calc(100% - 22px), calc(100% - 22px) 100%, 22px 100%, 0 calc(100% - 22px), 0 22px)',
-        }}
+        ref={cardRef}
+        onMouseMove={handleMouseMove}
+        onMouseEnter={handleMouseEnter}
+        onMouseLeave={handleMouseLeave}
+        className="group relative w-full flex flex-col items-center text-center p-7 sm:p-8 md:p-9 min-h-[350px] sm:min-h-[370px] justify-between select-none cursor-pointer will-change-transform"
       >
-        {/* Inner Card Solid Dark Surface */}
+        {/* ── Outer Golden Ambient Hover Glow ── */}
         <div
-          className="w-full h-full bg-gradient-to-b from-[#150f08] via-[#0d0905] to-[#070503]"
+          className="absolute -inset-1 opacity-0 group-hover:opacity-100 blur-xl transition-opacity duration-500 bg-gradient-to-b from-[#f0b14b]/35 via-[#c8892a]/15 to-transparent -z-10 pointer-events-none"
           style={{
             clipPath:
-              'polygon(21px 0, calc(100% - 21px) 0, 100% 21px, 100% calc(100% - 21px), calc(100% - 21px) 100%, 21px 100%, 0 calc(100% - 21px), 0 21px)',
+              'polygon(20px 0, calc(100% - 20px) 0, 100% 20px, 100% calc(100% - 20px), calc(100% - 20px) 100%, 20px 100%, 0 calc(100% - 20px), 0 20px)',
           }}
         />
-      </div>
 
-      {/* ── Exact Sci-Fi Corner Markings & Accents from Reference ── */}
-      {/* Top-Left Diagonal Inner Accent Line */}
-      <svg
-        className="absolute top-3 left-3 w-8 h-8 pointer-events-none text-[#e5a84b]/70 group-hover:text-[#ffd68a] transition-colors"
-        viewBox="0 0 30 30"
-        fill="none"
-      >
-        <path
-          d="M2 18 L18 2"
-          stroke="currentColor"
-          strokeWidth="1.5"
-          strokeLinecap="round"
+        {/* ── GSAP Dynamic Spotlight Light Follower ── */}
+        <div
+          ref={glowRef}
+          className="absolute w-44 h-44 rounded-full bg-[#f0b14b]/20 blur-2xl pointer-events-none opacity-0 -z-5"
         />
-      </svg>
 
-      {/* Bottom-Right Diagonal Inner Accent Line (Slash Mark) */}
-      <svg
-        className="absolute bottom-3 right-3 w-8 h-8 pointer-events-none text-[#e5a84b]/70 group-hover:text-[#ffd68a] transition-colors"
-        viewBox="0 0 30 30"
-        fill="none"
-      >
-        <path
-          d="M12 28 L28 12"
-          stroke="currentColor"
-          strokeWidth="1.5"
-          strokeLinecap="round"
-        />
-      </svg>
-
-      {/* ── Big Golden 3D Icon ── */}
-      <div className="relative z-10 my-auto flex items-center justify-center pt-2">
-        <div className="relative w-24 h-24 sm:w-28 sm:h-28 md:w-32 md:h-32 flex items-center justify-center transition-transform duration-300 group-hover:scale-110">
-          <div className="absolute inset-0 bg-[#e5a84b]/20 blur-2xl rounded-full pointer-events-none group-hover:bg-[#e5a84b]/40 transition-all duration-300" />
-          <Image
-            src={service.icon}
-            alt={service.title.replace('\n', ' ')}
-            width={130}
-            height={130}
-            priority
-            className="w-full h-full object-contain drop-shadow-[0_8px_22px_rgba(229,168,75,0.5)] select-none"
+        {/* ── Outer Chamfered Border & Background ── */}
+        <div
+          className="absolute inset-0 bg-gradient-to-b from-[#d4a853] via-[#8c6527] to-[#d4a853]/60 p-[1.5px] transition-all duration-300 group-hover:from-[#ffd580] group-hover:via-[#e5a53d] group-hover:to-[#ffd580]"
+          style={{
+            clipPath:
+              'polygon(22px 0, calc(100% - 22px) 0, 100% 22px, 100% calc(100% - 22px), calc(100% - 22px) 100%, 22px 100%, 0 calc(100% - 22px), 0 22px)',
+          }}
+        >
+          {/* Inner Card Solid Dark Surface */}
+          <div
+            className="w-full h-full bg-gradient-to-b from-[#150f08] via-[#0d0905] to-[#070503]"
+            style={{
+              clipPath:
+                'polygon(21px 0, calc(100% - 21px) 0, 100% 21px, 100% calc(100% - 21px), calc(100% - 21px) 100%, 21px 100%, 0 calc(100% - 21px), 0 21px)',
+            }}
           />
         </div>
-      </div>
 
-      {/* ── Card Text Content ── */}
-      <div className="relative z-10 w-full flex flex-col items-center mt-6">
-        {/* Title (Astronomus) */}
-        <h3 className="font-display text-base sm:text-lg md:text-xl font-bold uppercase tracking-[0.08em] text-[#f7f2e4] group-hover:text-[#ffd68a] transition-colors duration-300 leading-snug whitespace-pre-line">
-          {service.title}
-        </h3>
+        {/* ── Exact Sci-Fi Corner Markings & Accents with GSAP refs ── */}
+        {/* Top-Left Diagonal Inner Accent Line */}
+        <svg
+          ref={cornerTlRef}
+          className="absolute top-3 left-3 w-8 h-8 pointer-events-none text-[#e5a84b]/70 group-hover:text-[#ffd68a] transition-colors origin-top-left z-20"
+          viewBox="0 0 30 30"
+          fill="none"
+        >
+          <path
+            d="M2 18 L18 2"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+          />
+        </svg>
 
-        {/* Description (Poppins) */}
-        <p className="font-sans text-xs sm:text-[13.5px] md:text-sm text-[#a8a192] group-hover:text-[#cfc8b8] transition-colors duration-300 mt-2.5 leading-relaxed max-w-[280px]">
-          {service.description}
-        </p>
+        {/* Bottom-Right Diagonal Inner Accent Line (Slash Mark) */}
+        <svg
+          ref={cornerBrRef}
+          className="absolute bottom-3 right-3 w-8 h-8 pointer-events-none text-[#e5a84b]/70 group-hover:text-[#ffd68a] transition-colors origin-bottom-right z-20"
+          viewBox="0 0 30 30"
+          fill="none"
+        >
+          <path
+            d="M12 28 L28 12"
+            stroke="currentColor"
+            strokeWidth="1.5"
+            strokeLinecap="round"
+          />
+        </svg>
+
+        {/* ── Big Golden 3D Icon with GSAP Parallax Ref ── */}
+        <div className="relative z-10 my-auto flex items-center justify-center pt-2">
+          <div
+            ref={iconRef}
+            className="relative w-24 h-24 sm:w-28 sm:h-28 md:w-32 md:h-32 flex items-center justify-center will-change-transform"
+          >
+            <div className="absolute inset-0 bg-[#e5a84b]/20 blur-2xl rounded-full pointer-events-none group-hover:bg-[#e5a84b]/40 transition-all duration-300" />
+            <Image
+              src={service.icon}
+              alt={service.title.replace('\n', ' ')}
+              width={130}
+              height={130}
+              priority
+              className="w-full h-full object-contain drop-shadow-[0_10px_25px_rgba(229,168,75,0.55)] select-none"
+            />
+          </div>
+        </div>
+
+        {/* ── Card Text Content ── */}
+        <div className="relative z-10 w-full flex flex-col items-center mt-6">
+          {/* Title (Astronomus) */}
+          <h3 className="font-display text-base sm:text-lg md:text-xl font-bold uppercase tracking-[0.08em] text-[#f7f2e4] group-hover:text-[#ffd68a] transition-colors duration-300 leading-snug whitespace-pre-line">
+            {service.title}
+          </h3>
+
+          {/* Description (Poppins) */}
+          <p className="font-sans text-xs sm:text-[13.5px] md:text-sm text-[#a8a192] group-hover:text-[#cfc8b8] transition-colors duration-300 mt-2.5 leading-relaxed max-w-[280px]">
+            {service.description}
+          </p>
+        </div>
       </div>
     </motion.div>
   )
