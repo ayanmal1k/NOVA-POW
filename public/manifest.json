@@ -1,0 +1,21 @@
+{
+  "name": "Nova — Web3 Community & Growth Specialist",
+  "short_name": "Nova Pow",
+  "description": "Web3 Community Manager, Growth Strategist & Marketing Specialist portfolio.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#080604",
+  "theme_color": "#080604",
+  "icons": [
+    {
+      "src": "/icon.jpeg",
+      "sizes": "192x192",
+      "type": "image/jpeg"
+    },
+    {
+      "src": "/icon.jpeg",
+      "sizes": "512x512",
+      "type": "image/jpeg"
+    }
+  ]
+}
