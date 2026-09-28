@@ -199,15 +199,17 @@ export default function WriteReviewModal({
                     </motion.div>
 
                     <h3 className="font-display text-2xl sm:text-3xl font-extrabold uppercase tracking-[0.06em] text-white mb-3">
-                      REVIEW PUBLISHED!
+                      {rating >= 3 ? 'REVIEW PUBLISHED!' : 'SUBMITTED FOR REVIEW'}
                     </h3>
                     <p className="font-sans text-sm sm:text-base text-[#cfc8b8] max-w-sm">
-                      Thank you for rating Nova Pow! {rating >= 3 ? 'Your review has been verified and published to the live client carousel.' : 'Your feedback has been received.'}
+                      {rating >= 3
+                        ? 'Thank you for rating Nova Pow! Your review has been verified and published to the live client carousel.'
+                        : 'Thank you for your feedback! Your review has been sent for review by admins.'}
                     </p>
 
                     <div className="mt-6 flex items-center gap-1.5 text-[#e5a84b] text-xs font-semibold uppercase tracking-widest">
                       <Sparkles className="w-4 h-4 animate-spin" />
-                      UPDATING CAROUSEL...
+                      {rating >= 3 ? 'UPDATING CAROUSEL...' : 'FEEDBACK RECORDED'}
                     </div>
                   </div>
                 ) : (
@@ -269,7 +271,7 @@ export default function WriteReviewModal({
 
                       {rating < 3 && (
                         <p className="font-sans text-[11px] text-[#e5a84b]/80 italic">
-                          Note: Only ratings with 3 or more stars are displayed on the public live carousel.
+                          Note: 1 and 2 star reviews are sent directly to admins for moderation and review.
                         </p>
                       )}
                     </div>
