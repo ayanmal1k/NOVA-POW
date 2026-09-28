@@ -4,6 +4,8 @@ import {
   collection,
   addDoc,
   getDocs,
+  deleteDoc,
+  doc,
   query,
   where,
   orderBy,
@@ -12,6 +14,7 @@ import {
   Firestore,
   limit,
 } from 'firebase/firestore'
+
 
 export interface ReviewItem {
   id?: string
@@ -73,12 +76,14 @@ export function getFirebaseDb(): Firestore | null {
   return db
 }
 
-const LOCAL_STORAGE_KEY = 'novapow_community_reviews'
+const LOCAL_STORAGE_KEY = 'novapow_reviews_live'
 
 // Helper to get local cached reviews (only real submitted reviews)
 export function getStoredLocalReviews(): ReviewItem[] {
   if (typeof window === 'undefined') return []
   try {
+    // Also clean previous test keys if any
+    localStorage.removeItem('novapow_community_reviews')
     const raw = localStorage.getItem(LOCAL_STORAGE_KEY)
     if (raw) {
       const parsed = JSON.parse(raw)
@@ -105,6 +110,35 @@ export function saveLocalReview(review: ReviewItem): ReviewItem[] {
     return [review]
   }
 }
+
+/**
+ * Delete / Purge all reviews from local cache and Firestore
+ */
+export async function clearAllReviews(): Promise<{ success: boolean; count?: number }> {
+  if (typeof window !== 'undefined') {
+    try {
+      localStorage.removeItem(LOCAL_STORAGE_KEY)
+      localStorage.removeItem('novapow_community_reviews')
+    } catch (e) {
+      console.warn('LocalStorage clear notice:', e)
+    }
+  }
+  try {
+    const database = getFirebaseDb()
+    if (database) {
+      const snapshot = await getDocs(collection(database, 'reviews'))
+      const deletePromises = snapshot.docs.map((docItem) =>
+        deleteDoc(doc(database, 'reviews', docItem.id))
+      )
+      await Promise.all(deletePromises)
+      return { success: true, count: snapshot.size }
+    }
+  } catch (err) {
+    console.warn('[Firebase] Notice while clearing Firestore docs:', err)
+  }
+  return { success: true, count: 0 }
+}
+
 
 /**
  * Submit a new review to Firestore database & local backup
