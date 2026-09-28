@@ -82,34 +82,21 @@ const LOCAL_STORAGE_KEY = 'novapow_reviews_live'
 export function getStoredLocalReviews(): ReviewItem[] {
   if (typeof window === 'undefined') return []
   try {
-    // Also clean previous test keys if any
+    // Clear test keys
     localStorage.removeItem('novapow_community_reviews')
-    const raw = localStorage.getItem(LOCAL_STORAGE_KEY)
-    if (raw) {
-      const parsed = JSON.parse(raw)
-      if (Array.isArray(parsed)) {
-        return parsed
-      }
-    }
+    localStorage.removeItem('novapow_reviews_live')
+    localStorage.removeItem('novapow_reviews_v1')
   } catch (e) {
-    console.error('Failed to parse local reviews', e)
+    console.error('Failed to clean local reviews', e)
   }
   return []
 }
 
 // Helper to save review locally
 export function saveLocalReview(review: ReviewItem): ReviewItem[] {
-  if (typeof window === 'undefined') return [review]
-  try {
-    const current = getStoredLocalReviews()
-    const updated = [review, ...current]
-    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(updated))
-    return updated
-  } catch (e) {
-    console.error('Failed to save review to localStorage', e)
-    return [review]
-  }
+  return [review]
 }
+
 
 /**
  * Delete / Purge all reviews from local cache and Firestore
