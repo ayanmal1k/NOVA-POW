@@ -102,6 +102,10 @@ export default function Footer() {
               Proof of Work
             </a>
             <span className="text-[#d4a853]/40">•</span>
+            <a href="#reviews" className="hover:text-[#ffd68a] transition-colors font-medium">
+              Reviews
+            </a>
+            <span className="text-[#d4a853]/40">•</span>
             <a href="#contact" className="hover:text-[#ffd68a] transition-colors font-medium">
               Contact
             </a>
