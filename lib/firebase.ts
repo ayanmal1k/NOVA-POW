@@ -29,15 +29,12 @@ export const INITIAL_REVIEWS: ReviewItem[] = []
 
 // Firebase Web SDK configuration
 const firebaseConfig = {
-  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || 'AIzaSyDemoDummyKeyForNovaPowWeb3',
-  authDomain:
-    process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || 'nova-pow-reviews.firebaseapp.com',
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || 'nova-pow-reviews',
-  storageBucket:
-    process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || 'nova-pow-reviews.firebasestorage.app',
-  messagingSenderId:
-    process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || '457478305433',
-  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || '1:457478305433:web:nova-pow-client',
+  apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || '',
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || '',
+  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || '',
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || '',
+  messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || '',
+  appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || '',
 }
 
 let app: FirebaseApp | null = null
@@ -45,6 +42,9 @@ let db: Firestore | null = null
 
 export function getFirebaseApp(): FirebaseApp | null {
   if (typeof window === 'undefined') return null
+  if (!firebaseConfig.apiKey || !firebaseConfig.projectId) {
+    return null
+  }
   try {
     if (!getApps().length) {
       app = initializeApp(firebaseConfig)
@@ -57,6 +57,7 @@ export function getFirebaseApp(): FirebaseApp | null {
     return null
   }
 }
+
 
 export function getFirebaseDb(): Firestore | null {
   if (typeof window === 'undefined') return null
