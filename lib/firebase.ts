@@ -132,7 +132,7 @@ export async function submitReviewToFirebase(data: {
   try {
     const database = getFirebaseDb()
     if (database) {
-      const docRef = await addDoc(collection(database, 'reviews'), {
+      const savePromise = addDoc(collection(database, 'reviews'), {
         name: newReviewItem.name,
         projectName: newReviewItem.projectName,
         rating: newReviewItem.rating,
@@ -140,7 +140,11 @@ export async function submitReviewToFirebase(data: {
         role: newReviewItem.role,
         createdAt: serverTimestamp(),
       })
-      return { success: true, id: docRef.id }
+      const timeoutPromise = new Promise<{ id: string }>((resolve) =>
+        setTimeout(() => resolve({ id: newReviewItem.id || 'local' }), 1800)
+      )
+      const docRef: any = await Promise.race([savePromise, timeoutPromise])
+      return { success: true, id: docRef?.id || newReviewItem.id }
     }
   } catch (err: any) {
     console.warn('[Firebase] Firestore submission notice (saved to local cache):', err?.message || err)

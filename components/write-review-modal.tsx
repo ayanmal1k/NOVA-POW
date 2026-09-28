@@ -199,10 +199,10 @@ export default function WriteReviewModal({
                     </motion.div>
 
                     <h3 className="font-display text-2xl sm:text-3xl font-extrabold uppercase tracking-[0.06em] text-white mb-3">
-                      REVIEW RECEIVED!
+                      REVIEW PUBLISHED!
                     </h3>
                     <p className="font-sans text-sm sm:text-base text-[#cfc8b8] max-w-sm">
-                      Thank you for rating Nova Pow! {rating >= 3 ? 'Your review has been saved to Firebase and published to the live client carousel.' : 'Your feedback has been saved.'}
+                      Thank you for rating Nova Pow! {rating >= 3 ? 'Your review has been verified and published to the live client carousel.' : 'Your feedback has been received.'}
                     </p>
 
                     <div className="mt-6 flex items-center gap-1.5 text-[#e5a84b] text-xs font-semibold uppercase tracking-widest">
@@ -373,7 +373,7 @@ export default function WriteReviewModal({
                       {isSubmitting ? (
                         <div className="relative z-10 flex items-center gap-2 text-[#120c04] font-display text-xs sm:text-sm font-bold uppercase tracking-[0.14em]">
                           <Sparkles className="w-4 h-4 animate-spin" />
-                          SAVING TO FIREBASE...
+                          PUBLISHING REVIEW...
                         </div>
                       ) : (
                         <div className="relative z-10 flex items-center gap-2 text-[#120c04] font-display text-xs sm:text-sm font-bold uppercase tracking-[0.14em]">

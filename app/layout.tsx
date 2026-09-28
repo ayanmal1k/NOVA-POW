@@ -1,7 +1,6 @@
 import type { Metadata, Viewport } from 'next'
 import { Poppins } from 'next/font/google'
 import localFont from 'next/font/local'
-import { Analytics } from '@vercel/analytics/next'
 import SmoothScroll from '@/components/smooth-scroll'
 import './globals.css'
 
@@ -225,7 +224,7 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en" className="dark scroll-smooth">
+    <html lang="en" className="dark scroll-smooth" suppressHydrationWarning>
       <head>
         {/* Inject Structured Data for AI & Search Engines */}
         <script
@@ -235,9 +234,9 @@ export default function RootLayout({
       </head>
       <body
         className={`${poppins.variable} ${astronomus.variable} font-sans antialiased bg-[#080604] text-white`}
+        suppressHydrationWarning
       >
         <SmoothScroll>{children}</SmoothScroll>
-        <Analytics />
       </body>
     </html>
   )
