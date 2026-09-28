@@ -30,12 +30,14 @@ export interface ReviewItem {
 export const INITIAL_REVIEWS: ReviewItem[] = []
 
 
+const PROJECT_ID = process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || 'nova-pow-reviews'
+
 // Firebase Web SDK configuration
 const firebaseConfig = {
   apiKey: process.env.NEXT_PUBLIC_FIREBASE_API_KEY || '',
-  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || '',
-  projectId: process.env.NEXT_PUBLIC_FIREBASE_PROJECT_ID || '',
-  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || '',
+  authDomain: process.env.NEXT_PUBLIC_FIREBASE_AUTH_DOMAIN || `${PROJECT_ID}.firebaseapp.com`,
+  projectId: PROJECT_ID,
+  storageBucket: process.env.NEXT_PUBLIC_FIREBASE_STORAGE_BUCKET || `${PROJECT_ID}.firebasestorage.app`,
   messagingSenderId: process.env.NEXT_PUBLIC_FIREBASE_MESSAGING_SENDER_ID || '',
   appId: process.env.NEXT_PUBLIC_FIREBASE_APP_ID || '',
 }
@@ -61,7 +63,6 @@ export function getFirebaseApp(): FirebaseApp | null {
   }
 }
 
-
 export function getFirebaseDb(): Firestore | null {
   if (typeof window === 'undefined') return null
   if (db) return db
@@ -84,7 +85,6 @@ export function getStoredLocalReviews(): ReviewItem[] {
   try {
     // Clear test keys
     localStorage.removeItem('novapow_community_reviews')
-    localStorage.removeItem('novapow_reviews_live')
     localStorage.removeItem('novapow_reviews_v1')
   } catch (e) {
     console.error('Failed to clean local reviews', e)
@@ -96,7 +96,6 @@ export function getStoredLocalReviews(): ReviewItem[] {
 export function saveLocalReview(review: ReviewItem): ReviewItem[] {
   return [review]
 }
-
 
 /**
  * Delete / Purge all reviews from local cache and Firestore
@@ -119,13 +118,23 @@ export async function clearAllReviews(): Promise<{ success: boolean; count?: num
       )
       await Promise.all(deletePromises)
       return { success: true, count: snapshot.size }
+    } else {
+      // Direct REST delete
+      const res = await fetch(`https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents/reviews`)
+      const data = await res.json()
+      if (data.documents) {
+        await Promise.all(
+          data.documents.map((docItem: any) =>
+            fetch(`https://firestore.googleapis.com/v1/${docItem.name}`, { method: 'DELETE' })
+          )
+        )
+      }
     }
   } catch (err) {
     console.warn('[Firebase] Notice while clearing Firestore docs:', err)
   }
   return { success: true, count: 0 }
 }
-
 
 /**
  * Submit a new review to Firestore database & local backup
@@ -147,7 +156,6 @@ export async function submitReviewToFirebase(data: {
     createdAt: new Date().toISOString(),
   }
 
-  // Save locally for instant preview
   saveLocalReview(newReviewItem)
 
   try {
@@ -166,13 +174,68 @@ export async function submitReviewToFirebase(data: {
       )
       const docRef: any = await Promise.race([savePromise, timeoutPromise])
       return { success: true, id: docRef?.id || newReviewItem.id }
+    } else {
+      // Direct Firestore REST write
+      const restPromise = fetch(
+        `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents/reviews`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            fields: {
+              name: { stringValue: newReviewItem.name },
+              projectName: { stringValue: newReviewItem.projectName },
+              rating: { integerValue: String(newReviewItem.rating) },
+              review: { stringValue: newReviewItem.review },
+              role: { stringValue: newReviewItem.role || 'Client' },
+              createdAt: { stringValue: newReviewItem.createdAt },
+            },
+          }),
+        }
+      )
+      const timeoutPromise = new Promise<any>((resolve) =>
+        setTimeout(() => resolve({ id: newReviewItem.id }), 1800)
+      )
+      const res: any = await Promise.race([restPromise, timeoutPromise])
+      const resData = res?.json ? await res.json() : {}
+      const docId = resData?.name?.split('/').pop() || newReviewItem.id
+      return { success: true, id: docId }
     }
   } catch (err: any) {
-    console.warn('[Firebase] Firestore submission notice (saved to local cache):', err?.message || err)
+    console.warn('[Firebase] Firestore submission notice:', err?.message || err)
     return { success: true, id: newReviewItem.id }
   }
+}
 
-  return { success: true, id: newReviewItem.id }
+/**
+ * Fetch reviews from Firestore REST API
+ */
+async function fetchFirestoreRestReviews(): Promise<ReviewItem[]> {
+  try {
+    const res = await fetch(
+      `https://firestore.googleapis.com/v1/projects/${PROJECT_ID}/databases/(default)/documents/reviews`
+    )
+    const data = await res.json()
+    if (data.documents && Array.isArray(data.documents)) {
+      return data.documents
+        .map((d: any) => {
+          const f = d.fields || {}
+          return {
+            id: d.name?.split('/').pop(),
+            name: f.name?.stringValue || 'Anonymous',
+            projectName: f.projectName?.stringValue || 'Web3 Project',
+            rating: Number(f.rating?.integerValue || f.rating?.doubleValue || 5),
+            review: f.review?.stringValue || '',
+            role: f.role?.stringValue || 'Client',
+            createdAt: f.createdAt?.stringValue || d.createTime || new Date().toISOString(),
+          }
+        })
+        .filter((r: ReviewItem) => r.rating >= 3)
+    }
+  } catch (e) {
+    // Graceful silent fallback
+  }
+  return []
 }
 
 /**
@@ -182,17 +245,27 @@ export async function submitReviewToFirebase(data: {
 export function subscribeToFirebaseReviews(
   onUpdate: (reviews: ReviewItem[]) => void
 ): () => void {
-  const localList = getStoredLocalReviews().filter((r) => r.rating >= 3)
-  onUpdate(localList)
+  // Initial REST fetch
+  fetchFirestoreRestReviews().then((restList) => {
+    if (restList.length > 0) {
+      onUpdate(restList)
+    }
+  })
+
+  // Periodic refresh from Firestore
+  const intervalId = setInterval(() => {
+    fetchFirestoreRestReviews().then((restList) => {
+      onUpdate(restList)
+    })
+  }, 10000)
 
   try {
     const database = getFirebaseDb()
     if (!database) {
-      return () => {}
+      return () => clearInterval(intervalId)
     }
 
     const reviewsCol = collection(database, 'reviews')
-    // Fetch real reviews with rating >= 3
     const q = query(
       reviewsCol,
       where('rating', '>=', 3),
@@ -219,18 +292,20 @@ export function subscribeToFirebaseReviews(
 
           onUpdate(firestoreReviews.filter((r) => r.rating >= 3))
         } else {
-          // If Firestore is empty, show local reviews
-          onUpdate(getStoredLocalReviews().filter((r) => r.rating >= 3))
+          fetchFirestoreRestReviews().then(onUpdate)
         }
       },
       (error) => {
-        console.warn('[Firebase] onSnapshot notice (using local data):', error?.message)
+        console.warn('[Firebase] onSnapshot notice:', error?.message)
       }
     )
 
-    return unsubscribe
+    return () => {
+      clearInterval(intervalId)
+      unsubscribe()
+    }
   } catch (err) {
-    console.warn('[Firebase] Subscription listener error:', err)
-    return () => {}
+    return () => clearInterval(intervalId)
   }
 }
+
